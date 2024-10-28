@@ -1,0 +1,18 @@
+[project]
+name = "simple-ddpm"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "torch>=2.5.0",
+    "torchvision>=0.20.0",
+    "matplotlib>=3.9.2",
+    "tqdm>=4.66.5",
+    "numpy>=2.1.2",
+    "pyqt6>=6.7.1",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
