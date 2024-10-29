@@ -9,11 +9,16 @@ torch.manual_seed(42)
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # Hyperparameters
-NUM_EPOCHS = 128
+NUM_EPOCHS = 256
 BATCH_SIZE = 128
 IMAGE_SIZE = 32
 CHANNELS = 3
 TIMESTEPS = 1000
+
+
+def count_parameters(model):
+    return sum(p.numel() for p in model.parameters() if p.requires_grad)
+
 
 # Data loading and preprocessing
 transform = transforms.Compose(
@@ -31,31 +36,27 @@ train_dataset = datasets.CIFAR10(
 )
 
 train_loader = DataLoader(
-    train_dataset, batch_size=BATCH_SIZE, shuffle=True, num_workers=2, pin_memory=True
+    train_dataset, batch_size=BATCH_SIZE, shuffle=True, num_workers=8, pin_memory=True
 )
 
 
-# Define beta schedule (linear schedule as an example)
 def linear_beta_schedule(timesteps):
     beta_start = 0.0001
     beta_end = 0.02
     return torch.linspace(beta_start, beta_end, timesteps)
 
 
-# Calculate diffusion parameters
 def get_diffusion_params(timesteps, device):
     betas = linear_beta_schedule(timesteps)
     alphas = 1.0 - betas
-    alphas_cumprod = torch.cumprod(alphas, axis=0)
+    alphas_cumprod = torch.cumprod(alphas, dim=0)
     alphas_cumprod_prev = torch.cat([torch.ones(1), alphas_cumprod[:-1]])
 
     sqrt_one_minus_alphas_cumprod = torch.sqrt(1.0 - alphas_cumprod)
 
-    # Calculate posterior mean coefficients
     one_over_alphas = 1.0 / torch.sqrt(alphas)
     posterior_mean_coef = betas / sqrt_one_minus_alphas_cumprod
 
-    # Posterior variance
     posterior_variance = betas * (1.0 - alphas_cumprod_prev) / (1.0 - alphas_cumprod)
 
     return {
@@ -67,7 +68,6 @@ def get_diffusion_params(timesteps, device):
     }
 
 
-# Utility functions
 def extract(a, t, x_shape):
     """Extract coefficients at specified timesteps t"""
     batch_size = t.shape[0]
@@ -75,7 +75,6 @@ def extract(a, t, x_shape):
     return out.reshape(batch_size, *((1,) * (len(x_shape) - 1))).to(t.device)
 
 
-# Training utilities
 def get_loss_fn(model, params):
     def loss_fn(x_0):
         batch_size = x_0.shape[0]
@@ -117,9 +116,8 @@ def train_epoch(model, optimizer, train_loader, loss_fn):
 
 if __name__ == "__main__":
     model = UNet(32, TIMESTEPS).to(device)
-    model_avg = torch.optim.swa_utils.AveragedModel(
-        model, multi_avg_fn=torch.optim.swa_utils.get_ema_multi_avg_fn(0.9999)
-    )
+    nb_params = count_parameters(model)
+    print(f"Total number of parameters: {nb_params}")
     optimizer = torch.optim.AdamW(model.parameters(), lr=1e-4, betas=(0.9, 0.95))
     params = get_diffusion_params(TIMESTEPS, device)
     loss_fn = get_loss_fn(model, params)

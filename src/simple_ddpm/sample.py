@@ -32,15 +32,13 @@ def p_sample(model, x, t, params):
 @torch.no_grad()
 def sample_images(model, image_size, batch_size, channels, device, params):
     """Generate new images using the trained model"""
-    model.eval()
-
-    # Start from pure noise
     x = torch.randn(batch_size, channels, image_size, image_size).to(device)
 
-    # Gradually denoise the image
     for t in tqdm(reversed(range(TIMESTEPS)), desc="Sampling", total=TIMESTEPS):
         t_batch = torch.full((batch_size,), t, device=device, dtype=torch.long)
         x = p_sample(model, x, t_batch, params)
+        if t % 100 == 0:
+            show_images(x)
 
         if x.isnan().any():
             raise ValueError(f"NaN detected in image at timestep {t}")
@@ -54,14 +52,16 @@ def show_images(images, title=""):
         images = images.detach().cpu().numpy()
 
     images = (images * 0.25 + 0.5).clip(0, 1)
-    plt.figure(figsize=(10, 10))
     for idx in range(min(16, len(images))):
         plt.subplot(4, 4, idx + 1)
         plt.imshow(np.transpose(images[idx], (1, 2, 0)))
         plt.axis("off")
     plt.suptitle(title)
-    plt.show()
+    plt.draw()
+    plt.pause(0.001)
 
+
+plt.figure(figsize=(10, 10))
 
 params = get_diffusion_params(TIMESTEPS, device)
 
@@ -78,3 +78,4 @@ generated_images = sample_images(
     params=params,
 )
 show_images(generated_images, title="Generated Images")
+plt.show()
