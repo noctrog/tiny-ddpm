@@ -1,3 +1,4 @@
+from typing import Dict, Union
 import torch
 from tqdm import tqdm
 import matplotlib.pyplot as plt
@@ -6,12 +7,14 @@ from train import extract, get_diffusion_params
 from train import TIMESTEPS, IMAGE_SIZE, CHANNELS
 from model import UNet
 
-torch.manual_seed(42)
+torch.manual_seed(1)
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 @torch.no_grad()
-def p_sample(model, x, t, params):
+def p_sample(
+    model, x: torch.Tensor, t: torch.Tensor, params: Dict[str, torch.Tensor]
+) -> torch.Tensor:
     """Sample from the model at timestep t"""
     predicted_noise = model(x, t)
 
@@ -30,7 +33,14 @@ def p_sample(model, x, t, params):
 
 
 @torch.no_grad()
-def sample_images(model, image_size, batch_size, channels, device, params):
+def sample_images(
+    model: torch.nn.Module,
+    image_size: int,
+    batch_size: int,
+    channels: int,
+    device: torch.device,
+    params: Dict[str, torch.Tensor],
+):
     """Generate new images using the trained model"""
     x = torch.randn(batch_size, channels, image_size, image_size).to(device)
 
@@ -46,7 +56,7 @@ def sample_images(model, image_size, batch_size, channels, device, params):
     return x
 
 
-def show_images(images, title=""):
+def show_images(images: Union[torch.Tensor, np.array], title=""):
     """Display a batch of images in a grid"""
     if isinstance(images, torch.Tensor):
         images = images.detach().cpu().numpy()
@@ -61,21 +71,24 @@ def show_images(images, title=""):
     plt.pause(0.001)
 
 
-plt.figure(figsize=(10, 10))
+if __name__ == "__main__":
+    plt.figure(figsize=(10, 10))
 
-params = get_diffusion_params(TIMESTEPS, device)
+    params = get_diffusion_params(TIMESTEPS, device)
 
-model = UNet(32, TIMESTEPS).to(device)
-model.load_state_dict(torch.load("model.pkl", weights_only=True))
+    model = UNet(32, TIMESTEPS).to(device)
+    model.load_state_dict(torch.load("model.pkl", weights_only=True))
 
-model.eval()
-generated_images = sample_images(
-    model=model,
-    image_size=IMAGE_SIZE,
-    batch_size=16,
-    channels=CHANNELS,
-    device=device,
-    params=params,
-)
-show_images(generated_images, title="Generated Images")
-plt.show()
+    model.eval()
+    generated_images = sample_images(
+        model=model,
+        image_size=IMAGE_SIZE,
+        batch_size=16,
+        channels=CHANNELS,
+        device=device,
+        params=params,
+    )
+    show_images(generated_images, title="Generated Images")
+
+    # Keep the plot open after generation is finished
+    plt.show()

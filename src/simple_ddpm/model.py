@@ -6,7 +6,7 @@ import math
 T_EMBEDDING_SIZE = 32
 
 
-def sinusoidal_positional_embedding(max_seq_len, d_model):
+def sinusoidal_positional_embedding(max_seq_len: int, d_model: int) -> torch.Tensor:
     pe = torch.zeros(max_seq_len, d_model)
     position = torch.arange(0, max_seq_len, dtype=torch.float).unsqueeze(1)
     div_term = torch.exp(
@@ -149,7 +149,7 @@ class UNet(nn.Module):
         intermediates = []
         for enc, dow in zip(self.encoder, self.downsamplers):
             x = enc(x, t_emb)
-            intermediates.append(x)  # TODO: Is this a copy?
+            intermediates.append(x)
             x = dow(x)
 
         x = self.bottleneck(x, t_emb)
