@@ -15,6 +15,7 @@ BATCH_SIZE = 128
 IMAGE_SIZE = 32
 CHANNELS = 3
 TIMESTEPS = 1000
+DDIM_TIMESTEPS = 100
 
 
 def count_parameters(model):
@@ -40,7 +41,10 @@ train_loader = DataLoader(
 
 
 def get_diffusion_params(
-    timesteps: int, device: torch.device
+    timesteps: int,
+    device: torch.device,
+    ddim_timesteps: int = DDIM_TIMESTEPS,
+    eta=0.0,
 ) -> Dict[str, torch.Tensor]:
     def linear_beta_schedule(timesteps):
         beta_start = 0.0001
@@ -59,12 +63,21 @@ def get_diffusion_params(
 
     posterior_variance = betas * (1.0 - alphas_cumprod_prev) / (1.0 - alphas_cumprod)
 
+    ddim_sigma = eta * torch.sqrt(
+        (1.0 - alphas_cumprod_prev)
+        / (1.0 - alphas_cumprod)
+        * (1 - alphas_cumprod / alphas_cumprod_prev)
+    )
+
     return {
+        # DDPM Parameters
         "betas": betas.to(device),
         "alphas_cumprod": alphas_cumprod.to(device),
         "posterior_variance": posterior_variance.to(device),
         "one_over_alphas": one_over_alphas.to(device),
         "posterior_mean_coef": posterior_mean_coef.to(device),
+        # DDIM Parameters
+        "ddim_sigma": ddim_sigma.to(device),
     }
 
 
@@ -94,7 +107,6 @@ def get_loss_fn(model: torch.nn.Module, params: Dict[str, torch.Tensor]) -> Call
     return loss_fn
 
 
-# Training loop template
 def train_epoch(
     model: torch.nn.Module, optimize, train_loader: DataLoader, loss_fn: Callable
 ) -> float:
