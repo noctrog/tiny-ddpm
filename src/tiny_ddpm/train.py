@@ -17,6 +17,9 @@ CHANNELS = 3
 TIMESTEPS = 1000
 DDIM_TIMESTEPS = 100
 
+NORM_MEAN = (0.4914, 0.4822, 0.4465)
+NORM_STD = (0.2470, 0.2435, 0.2616)
+
 
 def count_parameters(model):
     return sum(p.numel() for p in model.parameters() if p.requires_grad)
@@ -27,7 +30,7 @@ transform = transforms.Compose(
         transforms.Resize(IMAGE_SIZE),
         transforms.RandomHorizontalFlip(0.5),
         transforms.ToTensor(),
-        transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2470, 0.2435, 0.2616)),
+        transforms.Normalize(NORM_MEAN, NORM_STD),
     ]
 )
 
